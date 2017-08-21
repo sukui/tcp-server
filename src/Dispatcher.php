@@ -54,7 +54,8 @@ class Dispatcher
         }
 
         $serviceName = str_replace('.', '\\', $serviceName);
-        $serviceName = Nova::removeNovaNamespace($serviceName, $appName);
+        //$serviceName = Nova::removeNovaNamespace($serviceName, $appName);
+        $serviceName = substr($serviceName,strpos($serviceName,"\\Service\\")+1);
         $serviceName = $appNamespace . $serviceName;
 
         return $serviceName;
