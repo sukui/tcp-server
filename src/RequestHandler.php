@@ -107,19 +107,26 @@ class RequestHandler
 
     private function handleRequestException($response, $e)
     {
-        if (Debug::get()) {
+        try {
+            if (Debug::get()) {
+                echo_exception($e);
+            }
+
+            if ($this->request && $this->request->getServiceName()) {
+                $this->reportHawk();
+                $this->logErr($e);
+            }
+
+            $coroutine = static::handleException($this->middleWareManager, $response, $e);
+            Task::execute($coroutine, $this->context);
+
+            $this->event->fire($this->getRequestFinishJobId());
+        } catch (\Throwable $t) {
+            echo_exception($t);
+        } catch (\Exception $e) {
             echo_exception($e);
         }
 
-        if ($this->request && $this->request->getServiceName()) {
-            $this->reportHawk();
-            $this->logErr($e);
-        }
-
-        $coroutine = static::handleException($this->middleWareManager, $response, $e);
-        Task::execute($coroutine, $this->context);
-
-        $this->event->fire($this->getRequestFinishJobId());
     }
 
     /**
@@ -129,16 +136,22 @@ class RequestHandler
      */
     public static function handleException($middleware, $response, $t)
     {
-        $result = null;
-        if ($middleware) {
-            $result = (yield $middleware->handleException($t));
-        }
+        try {
+            $result = null;
+            if ($middleware) {
+                $result = (yield $middleware->handleException($t));
+            }
 
-        // 兼容PHP5
-        if ($result && $result instanceof \Throwable || $result instanceof \Exception) {
-            $response->sendException($result);
-        } else {
-            $response->sendException($t);
+            // 兼容PHP5
+            if ($result && $result instanceof \Throwable || $result instanceof \Exception) {
+                $response->sendException($result);
+            } else {
+                $response->sendException($t);
+            }
+        } catch (\Throwable $t) {
+            echo_exception($t);
+        } catch (\Exception $e) {
+            echo_exception($e);
         }
     }
 
@@ -151,12 +164,19 @@ class RequestHandler
 
     public function handleTimeout()
     {
-        $this->task->setStatus(Signal::TASK_KILLED);
-        $this->reportHawk();
-        $ex = $this->logTimeout();
-        $coroutine = static::handleException($this->middleWareManager, $this->response, $ex);
-        Task::execute($coroutine, $this->context);
-        $this->event->fire($this->getRequestFinishJobId());
+        try {
+            $this->task->setStatus(Signal::TASK_KILLED);
+            $this->reportHawk();
+            $ex = $this->logTimeout();
+            $coroutine = static::handleException($this->middleWareManager, $this->response, $ex);
+            Task::execute($coroutine, $this->context);
+            $this->event->fire($this->getRequestFinishJobId());
+        } catch (\Throwable $t) {
+            echo_exception($t);
+        } catch (\Exception $e) {
+            echo_exception($e);
+        }
+
     }
 
     private function getTraceIdInfo()
