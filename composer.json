@@ -16,7 +16,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Zan\\Framework\\Network\\Tcp\\": "src/"
+      "ZanPHP\\TcpServer\\": "src/"
     }
   },
   "extra": {
